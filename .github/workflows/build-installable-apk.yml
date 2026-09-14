@@ -1,0 +1,91 @@
+name: Build Installable Test APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "app/**"
+      - "shell/**"
+      - "scripts/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - "gradle/**"
+      - ".github/workflows/build-installable-apk.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "shell/**"
+      - "scripts/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - "gradle/**"
+      - ".github/workflows/build-installable-apk.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: installable-apk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Download code
+        uses: actions/checkout@v6
+
+      - name: Prepare Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Prepare Android tools
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ""
+
+      - name: Prepare Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Install needed tools
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "cmake;3.22.1" \
+            "ndk;28.2.13676358"
+
+      - name: Build debug-signed APKs
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache \
+            -Dkotlin.compiler.execution.strategy=in-process \
+            -PallowDebugSignedRelease=true \
+            :app:assembleStandardDebug \
+            :app:assembleGplayDebug
+
+      - name: Write checksums
+        run: |
+          sha256sum \
+            app/build/outputs/apk/standard/debug/*.apk \
+            app/build/outputs/apk/gplay/debug/*.apk \
+            > app/build/outputs/apk/SHA256SUMS.txt
+
+      - name: Upload installable APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: webtoapp-2.6.4-installable-debug-${{ github.run_number }}
+          path: |
+            app/build/outputs/apk/standard/debug/*.apk
+            app/build/outputs/apk/gplay/debug/*.apk
+            app/build/outputs/apk/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
