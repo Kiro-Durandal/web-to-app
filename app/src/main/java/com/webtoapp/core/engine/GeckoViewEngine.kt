@@ -761,6 +761,14 @@ class GeckoViewEngine(
                 return result
             }
 
+            /** HTML select, datalist, and other content-driven menu/list prompts. */
+            override fun onChoicePrompt(
+                session: GeckoSession,
+                prompt: GeckoSession.PromptDelegate.ChoicePrompt
+            ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse>? {
+                return GeckoChoicePromptDialog.show(viewContext.findActivity(), prompt)
+            }
+
             /**
              * HTTP Basic/Digest auth and proxy auth — the Gecko counterpart of
              * onReceivedHttpAuthRequest. Mirrors the WebView path's dialog (same strings,
