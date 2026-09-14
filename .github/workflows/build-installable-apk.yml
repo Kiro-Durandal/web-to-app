@@ -73,11 +73,12 @@ jobs:
             :app:assembleGplayDebug
 
       - name: Write checksums
+        working-directory: app/build/outputs/apk
         run: |
           sha256sum \
-            app/build/outputs/apk/standard/debug/*.apk \
-            app/build/outputs/apk/gplay/debug/*.apk \
-            > app/build/outputs/apk/SHA256SUMS.txt
+            standard/debug/*.apk \
+            gplay/debug/*.apk \
+            > SHA256SUMS.txt
 
       - name: Upload installable APKs
         uses: actions/upload-artifact@v4
